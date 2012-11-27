@@ -28,7 +28,10 @@ class Model(WarlockModel):
 
     @classmethod
     def find_one(cls, *args, **kwargs):
-        return cls(**cls.collection().find_one(*args, **kwargs))
+        result = cls.collection().find_one(*args, **kwargs)
+        if result != None:
+            return cls(**result)
+        return None
 
     ''' Counts the number of items:
         - not the same as pymongo's count, this is the equivalent to:
