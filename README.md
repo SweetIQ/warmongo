@@ -1,6 +1,6 @@
 # Warmongo!
 
-Most of this README is shamelessly forked from [[warlock|https://github.com/bcwaldon/warlock]].
+Most of this README is shamelessly forked from https://github.com/bcwaldon/warlock.
 
 ## Wat
 
