@@ -2,6 +2,8 @@
 
 Most of this README is shamelessly forked from https://github.com/bcwaldon/warlock.
 
+Unfortunately the original warlock doesn't work with warmongo, you'll have to use this fork for now: https://github.com/robbrit/warlock
+
 ## Wat
 
 Extended warlock to support saving to a MongoDB database.
@@ -51,3 +53,17 @@ Extended warlock to support saving to a MongoDB database.
       File "warlock/model.py", line 47, in __setattr__
         raise InvalidOperation(msg)
     warlock.error.InvalidOperation: Unable to set 'overlord' to 'Bears'
+
+## Quirks
+
+For non-standard types like ObjectId or ISODate, the validation layer breaks. You'll have to use the "any" type for the time being:
+
+    >>> schema = {
+	    'name': 'Country',
+	    'properties': {
+	        'name': {'type': 'string'},
+	        'abbreviation': {'type': 'string'},
+          'leader_id' : {'type': 'any'},
+	    },
+	    'additionalProperties': False,
+    }
