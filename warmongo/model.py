@@ -16,6 +16,16 @@ class Model(WarlockModel):
 
         self._id = str(self.collection().save(self.to_mongo(d)))
 
+    ''' Retrieve an element from the database. If it doesn't exist, create it. '''
+    @classmethod
+    def find_or_create(cls, *args, **kwargs):
+        result = cls.find_one(*args, **kwargs)
+
+        if result == None:
+            result = cls(*args, **kwargs)
+
+        return result
+
     ''' Grabs a set of elements from the DB.
     Note: This returns a generator, so you can't to do an efficient count. To get a count
     '''
