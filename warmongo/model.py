@@ -8,8 +8,14 @@ from bson import ObjectId
 inflect_engine = inflect.engine()
 
 class Model(WarlockModel):
-    def __init__(self, *args, **kwargs):
-        WarlockModel.__init__(self, *args, **self.from_mongo(kwargs))
+    def __init__(self, schema, *args, **kwargs):
+        if len(kwargs) == 0 and len(args) > 0:
+            # creating object with first element in args as object
+            kwargs = args[0]
+            args = args[1:]
+
+        # creating object in kwargs form
+        WarlockModel.__init__(self, schema, *args, **self.from_mongo(kwargs))
 
     def save(self):
         d = dict(self)
@@ -31,6 +37,12 @@ class Model(WarlockModel):
     '''
     @classmethod
     def find(cls, *args, **kwargs):
+        if len(kwargs) > 0 and len(args) == 0:
+            # Allow find to accept kwargs format for querying, pass things
+            # to pymongo as it expects
+            args = (kwargs,) + args
+            kwargs = {}
+
         result = cls.collection().find(*args, **kwargs)
 
         for obj in result:
@@ -38,6 +50,12 @@ class Model(WarlockModel):
 
     @classmethod
     def find_one(cls, *args, **kwargs):
+        if len(kwargs) > 0 and len(args) == 0:
+            # Allow find_one to accept kwargs format for querying, pass things
+            # to pymongo as it expects
+            args = (kwargs,) + args
+            kwargs = {}
+
         result = cls.collection().find_one(*args, **kwargs)
         if result != None:
             return cls(**result)
@@ -49,6 +67,12 @@ class Model(WarlockModel):
     '''
     @classmethod
     def count(cls, *args, **kwargs):
+        if len(kwargs) > 0 and len(args) == 0:
+            # Allow find to accept kwargs format for querying, pass things
+            # to pymongo as it expects
+            args = (kwargs,) + args
+            kwargs = {}
+
         return cls.collection().find(*args, **kwargs).count()
 
     @classmethod
