@@ -8,14 +8,14 @@ from bson import ObjectId
 inflect_engine = inflect.engine()
 
 class Model(WarlockModel):
-    def __init__(self, schema, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         if len(kwargs) == 0 and len(args) > 0:
             # creating object with first element in args as object
             kwargs = args[0]
             args = args[1:]
 
         # creating object in kwargs form
-        WarlockModel.__init__(self, schema, *args, **self.from_mongo(kwargs))
+        WarlockModel.__init__(self, *args, **self.from_mongo(kwargs))
 
     def save(self):
         d = dict(self)
