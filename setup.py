@@ -10,8 +10,8 @@ def parse_requirements():
 
 setuptools.setup(
     name='warmongo',
-    version='0.1.0',
-    description='Extension of warlock to support MongoDB',
+    version='0.2.0',
+    description='JSON-Schema-based ORM for MongoDB',
     author='Rob Britton',
     author_email='rob@robbritton.com',
     url='http://github.com/robbrit/warmongo',
