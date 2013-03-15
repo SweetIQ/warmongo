@@ -1,4 +1,4 @@
 inflect==0.2.3
 pymongo==2.3
-jsonschema==1.2.0
+jsonschema==1.1.0
 warlock>=0.8.1
