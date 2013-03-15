@@ -1,12 +1,13 @@
 # Warmongo!
 
-Most of this README is shamelessly forked from https://github.com/bcwaldon/warlock.
-
-Unfortunately the original warlock doesn't work with warmongo, you'll have to use this fork for now: https://github.com/robbrit/warlock
-
 ## Wat
 
-Extended warlock to support saving to a MongoDB database.
+This is a package for generating classes from a JSON-schema that are to be
+saved in MongoDB.
+
+This extends the JSON schema by supporting extra BSON types:
+* ObjectId - use the `"object_id"` type in your JSON schema to validate that
+             a field is a valid ObjectId.
 
 ## How
 
@@ -54,16 +55,6 @@ Extended warlock to support saving to a MongoDB database.
         raise InvalidOperation(msg)
     warlock.error.InvalidOperation: Unable to set 'overlord' to 'Bears'
 
-## Quirks
+## Licence
 
-For non-standard types like ObjectId or ISODate, the validation layer breaks. You'll have to use the "any" type for the time being:
-
-    >>> schema = {
-	    'name': 'Country',
-	    'properties': {
-	        'name': {'type': 'string'},
-	        'abbreviation': {'type': 'string'},
-          'leader_id' : {'type': 'any'},
-	    },
-	    'additionalProperties': False,
-    }
+Apache Version 2.0
