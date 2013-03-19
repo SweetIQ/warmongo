@@ -15,7 +15,7 @@
 from warlock.model import Model as WarlockModel
 import database
 
-import inflect, re, jsonschema, exceptions
+import inflect, re, jsonschema
 
 from bson import ObjectId
 
@@ -155,7 +155,4 @@ class Model(WarlockModel):
         bson_types = {
             "object_id": ObjectId
         }
-        try:
-            jsonschema.validate(obj, self.schema, types=bson_types)
-        except jsonschema.ValidationError as exc:
-            raise exceptions.ValidationError(str(exc))
+        jsonschema.validate(obj, self.schema, types=bson_types)
