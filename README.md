@@ -9,6 +9,9 @@ This extends the JSON schema by supporting extra BSON types:
 * ObjectId - use the `"object_id"` type in your JSON schema to validate that
              a field is a valid ObjectId.
 
+Warmongo is based off of Warlock, which is a JSON-schema validator for Python:
+- https://github.com/bcwaldon/warlock
+
 ## How
 
 1) Build your schema
