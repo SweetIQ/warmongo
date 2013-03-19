@@ -15,7 +15,7 @@
 from warlock.model import Model as WarlockModel
 import database
 
-import inflect, re, jsonschema
+import inflect, re, jsonschema, exceptions
 
 from bson import ObjectId
 
