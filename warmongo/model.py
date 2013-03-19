@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from warlock.model import Model as WarlockModel
+from warlock.exceptions import ValidationError
 import database
 
 import inflect, re, jsonschema
@@ -155,4 +156,7 @@ class Model(WarlockModel):
         bson_types = {
             "object_id": ObjectId
         }
-        jsonschema.validate(obj, self.schema, types=bson_types)
+        try:
+            jsonschema.validate(obj, self.schema, types=bson_types)
+        except jsonschema.ValidationError as exc:
+            raise ValidationError(str(exc))
