@@ -45,14 +45,18 @@ class Model(WarlockModel):
     def find_or_create(cls, *args, **kwargs):
         ''' Retrieve an element from the database. If it doesn't exist, create it.
         Calliing this method is equivalent to calling find_one and then creating
-        an object. Note that this method is not atomic.
+        an object. Note that this method is not atomic. Two return values:
+        a boolean that is True if the object was created, False if not; and the
+        object itself.
         '''
         result = cls.find_one(*args, **kwargs)
+        created = False
 
         if result == None:
             result = cls(*args, **kwargs)
+            created = True
 
-        return result
+        return created, result
 
     @classmethod
     def find(cls, *args, **kwargs):
