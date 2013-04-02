@@ -127,7 +127,8 @@ class Model(WarlockModel):
     def collection(cls):
         ''' Get the pymongo collection object for this model. Useful for
         features not supported by Warmongo like aggregate queries and map-reduce. '''
-        return database.get_collection(collection=cls.collection_name())
+        return database.get_collection(collection=cls.collection_name(),
+                database=cls.database_name())
 
 
     @classmethod
@@ -136,6 +137,13 @@ class Model(WarlockModel):
         to take the lowercase of the class name and pluralize it. '''
         global inflect_engine
         return inflect_engine.plural(cls.__name__.lower())
+
+    
+    @classmethod
+    def database_name(cls):
+        ''' Get the database associated with this class. Meant to be overridden
+        in subclasses. '''
+        return None
 
 
     def from_mongo(self, d):

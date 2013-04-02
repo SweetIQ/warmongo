@@ -58,6 +58,36 @@ Warmongo is based off of Warlock, which is a JSON-schema validator for Python:
         raise InvalidOperation(msg)
     warlock.error.InvalidOperation: Unable to set 'overlord' to 'Bears'
 
+## Choosing a collection
+
+By default Warmongo will use the pluralized version of the model's name. If
+you want to use something else, put it in the JSON-schema:
+
+    {
+        "name": "MyModel",
+        ...
+        "collectionName": "some_collection",
+        ...
+    }
+
+## Multiple Databases
+
+To use multiple databases, simply call `connect()` multiple times:
+
+    >>> import warmongo
+    >>> warmongo.connect("test")
+    >>> warmongo.connect("other_db")
+
+By default all models will use the first database specified. If you want to use
+a different one, put it in the JSON-schema:
+
+    {
+        "name": "MyModel",
+        ...
+        "databaseName": "other_db",
+        ...
+    }
+
 ## Licence
 
 Apache Version 2.0

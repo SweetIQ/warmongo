@@ -23,4 +23,14 @@ def model_factory(schema, base_class=WarmongoModel):
     if not "_id" in schema["properties"]:
         schema["properties"]["_id"] = { "type": "object_id" }
 
-    return warlock.model_factory(schema, base_class)
+    class Model(base_class):
+        # Override collection/database names if necessary
+        @classmethod
+        def collection_name(cls):
+            return schema.get("collectionName", base_class.collection_name())
+
+        @classmethod
+        def database_name(cls):
+            return schema.get("databaseName", base_class.database_name())
+
+    return warlock.model_factory(schema, Model)
