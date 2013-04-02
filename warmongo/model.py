@@ -136,13 +136,20 @@ class Model(WarlockModel):
         ''' Get the collection associated with this class. The convention is
         to take the lowercase of the class name and pluralize it. '''
         global inflect_engine
-        return inflect_engine.plural(cls.__name__.lower())
+        if cls._schema.get("collectionName"):
+            return cls._schema.get("collectionName")
+        elif cls._schema.get("name"):
+            return inflect_engine.plural(cls._schema.get("name").lower())
+        else:
+            return inflect_engine.plural(cls.__name__.lower())
 
     
     @classmethod
     def database_name(cls):
         ''' Get the database associated with this class. Meant to be overridden
         in subclasses. '''
+        if cls._schema.get("databaseName"):
+            return cls._schema.get("databaseName")
         return None
 
 
