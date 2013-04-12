@@ -16,11 +16,14 @@ from warlock.model import Model as WarlockModel
 from warlock.exceptions import ValidationError
 import database
 
-import inflect, re, jsonschema
+import inflect
+import re
+import jsonschema
 
 from bson import ObjectId
 
 inflect_engine = inflect.engine()
+
 
 class Model(WarlockModel):
     def __init__(self, *args, **kwargs):
@@ -30,9 +33,13 @@ class Model(WarlockModel):
             kwargs = args[0]
             args = args[1:]
 
+        # Replace any sub-fields of mine with their respective defaults
+        for field, value in self.schema.get("default", {}).items():
+            if field not in kwargs:
+                kwargs[field] = value
+
         # creating object in kwargs form
         WarlockModel.__init__(self, *args, **self.from_mongo(kwargs))
-
 
     def save(self):
         ''' Saves an object to the database. '''
@@ -40,16 +47,14 @@ class Model(WarlockModel):
 
         self._id = self.collection().save(self.to_mongo(d))
 
-
     @classmethod
     def find_or_create(cls, *args, **kwargs):
-        ''' Retrieve an element from the database. If it doesn't exist, create it.
-        Calliing this method is equivalent to calling find_one and then creating
-        an object. Note that this method is not atomic.
-        '''
+        ''' Retrieve an element from the database. If it doesn't exist, create
+        it.  Calling this method is equivalent to calling find_one and then
+        creating an object. Note that this method is not atomic.  '''
         result = cls.find_one(*args, **kwargs)
 
-        if result == None:
+        if result is None:
             result = cls(*args, **kwargs)
 
         return result
@@ -58,8 +63,9 @@ class Model(WarlockModel):
     def find(cls, *args, **kwargs):
         ''' Grabs a set of elements from the DB.
         Note: This returns a generator, so you can't to do an efficient count.
-        To get a count, use the count() function which accepts the same arguments
-        as find() with the exception of non-query fields like sort, limit, skip.
+        To get a count, use the count() function which accepts the same
+        arguments as find() with the exception of non-query fields like sort,
+        limit, skip.
         Possible kwarg options:
         - sort: field(s) to sort on. Same format as pymongo
         - limit: number of results to return
@@ -92,6 +98,21 @@ class Model(WarlockModel):
         for obj in result:
             yield cls(**obj)
 
+    @classmethod
+    def find_by_id(cls, id, *args, **kwargs):
+        ''' Finds a single object from this collection. '''
+        if len(kwargs) > 0 and len(args) == 0:
+            # Allow find_one to accept kwargs format for querying, pass things
+            # to pymongo as it expects
+            args = (kwargs,) + args
+            kwargs = {}
+
+        kwargs["id"] = id
+
+        result = cls.collection().find_one(*args, **kwargs)
+        if result is not None:
+            return cls(**result)
+        return None
 
     @classmethod
     def find_one(cls, *args, **kwargs):
@@ -103,10 +124,9 @@ class Model(WarlockModel):
             kwargs = {}
 
         result = cls.collection().find_one(*args, **kwargs)
-        if result != None:
+        if result is not None:
             return cls(**result)
         return None
-
 
     @classmethod
     def count(cls, *args, **kwargs):
@@ -122,14 +142,13 @@ class Model(WarlockModel):
 
         return cls.collection().find(*args, **kwargs).count()
 
-
     @classmethod
     def collection(cls):
         ''' Get the pymongo collection object for this model. Useful for
-        features not supported by Warmongo like aggregate queries and map-reduce. '''
+        features not supported by Warmongo like aggregate queries and
+        map-reduce. '''
         return database.get_collection(collection=cls.collection_name(),
-                database=cls.database_name())
-
+                                       database=cls.database_name())
 
     @classmethod
     def collection_name(cls):
@@ -143,7 +162,6 @@ class Model(WarlockModel):
         else:
             return inflect_engine.plural(cls.__name__.lower())
 
-    
     @classmethod
     def database_name(cls):
         ''' Get the database associated with this class. Meant to be overridden
@@ -152,16 +170,13 @@ class Model(WarlockModel):
             return cls._schema.get("databaseName")
         return None
 
-
     def from_mongo(self, d):
         ''' Convert a dict from Mongo format to our format. '''
         return d
 
-
     def to_mongo(self, d):
         ''' Convert a dict to Mongo format from our format. '''
         return d
-
 
     def validate(self, obj):
         """ Apply a JSON schema to an object - this is an override from
