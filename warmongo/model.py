@@ -41,6 +41,37 @@ class Model(WarlockModel):
         # creating object in kwargs form
         WarlockModel.__init__(self, *args, **self.from_mongo(kwargs))
 
+    def convert_types(self, data, schema=None):
+        ''' Returns a dict with any fields converted to proper bson types. '''
+        if schema is None:
+            schema = self.schema
+
+        def convert_type(value, subschema):
+            value_type = subschema.get("type")
+
+            # to convert: integers, ObjectID
+            # TODO: dates
+            if value_type == "integer":
+                return int(value)
+            elif value_type == "object_id":
+                return ObjectId(value)
+            elif value_type == "array":
+                # get the subkey type
+                return [
+                    convert_type(obj, subschema.get("items", {}))
+                    for obj in value
+                ]
+            elif value_type == "object":
+                return self.convert_types(data, subschema)
+
+        result = {}
+        for key, value in data.iteritems():
+            if key in schema.get("properties", {}):
+                subschema = schema["properties"][key]
+                result[key] = convert_type(value, subschema)
+
+        return result
+
     def save(self):
         ''' Saves an object to the database. '''
         d = dict(self)
@@ -158,9 +189,12 @@ class Model(WarlockModel):
         if cls._schema.get("collectionName"):
             return cls._schema.get("collectionName")
         elif cls._schema.get("name"):
-            return inflect_engine.plural(cls._schema.get("name").lower())
+            name = inflect_engine.plural(cls._schema.get("name"))
         else:
-            return inflect_engine.plural(cls.__name__.lower())
+            name = inflect_engine.plural(cls.__name__)
+
+        # convert to snake case
+        return (name[0] + re.sub('([A-Z])', r'_\1', name[1:])).lower()
 
     @classmethod
     def database_name(cls):

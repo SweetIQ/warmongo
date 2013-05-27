@@ -10,7 +10,7 @@ def parse_requirements():
 
 setuptools.setup(
     name='warmongo',
-    version='0.3.2',
+    version='0.3.3',
     description='JSON-Schema-based ORM for MongoDB',
     author='Rob Britton',
     author_email='rob@robbritton.com',
