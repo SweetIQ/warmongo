@@ -20,10 +20,10 @@ setuptools.setup(
     install_requires=parse_requirements(),
     classifiers=[
         "Programming Language :: Python",
-        "License :: OSI Approved :: Apache v2.0",
-        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: Apache Software License",
+        "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
-        "Topic :: Database"
+        "Topic :: Database :: Front-Ends"
     ],
     long_description="""\
   JSON-Schema-based ORM for MongoDB
