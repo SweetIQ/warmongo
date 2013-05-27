@@ -206,7 +206,7 @@ class Model(WarlockModel):
 
     def from_mongo(self, d):
         ''' Convert a dict from Mongo format to our format. '''
-        return d
+        return self.convert_types(d)
 
     def to_mongo(self, d):
         ''' Convert a dict to Mongo format from our format. '''
