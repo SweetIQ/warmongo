@@ -63,6 +63,8 @@ class Model(WarlockModel):
                 ]
             elif value_type == "object":
                 return self.convert_types(data, subschema)
+            else:
+                return value
 
         result = {}
         for key, value in data.iteritems():
