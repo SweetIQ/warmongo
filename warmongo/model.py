@@ -46,6 +46,11 @@ class Model(WarlockModel):
         if schema is None:
             schema = self.schema
 
+        if not "properties" in schema:
+            # The schema is likely an object, but it is an object that does
+            # not have a properties field. Just return the whole object.
+            return data
+
         def convert_type(value, subschema):
             value_type = subschema.get("type")
 
@@ -62,7 +67,7 @@ class Model(WarlockModel):
                     for obj in value
                 ]
             elif value_type == "object":
-                return self.convert_types(data, subschema)
+                return self.convert_types(value, subschema)
             else:
                 return value
 
