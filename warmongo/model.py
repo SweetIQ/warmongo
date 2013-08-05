@@ -26,20 +26,21 @@ inflect_engine = inflect.engine()
 
 
 class Model(WarlockModel):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, fields, *args, **kwargs):
         ''' Creates an instance of the object.'''
-        if len(kwargs) == 0 and len(args) > 0:
-            # creating object with first element in args as object
-            kwargs = args[0]
-            args = args[1:]
-
         # Replace any sub-fields of mine with their respective defaults
         for field, value in self.schema.get("default", {}).items():
             if field not in kwargs:
-                kwargs[field] = value
+                fields[field] = value
+
+        if kwargs.get("from_find"):
+            del kwargs["from_find"]
+            self._from_find = True
+        else:
+            self._from_find = False
 
         # creating object in kwargs form
-        WarlockModel.__init__(self, *args, **self.from_mongo(kwargs))
+        WarlockModel.__init__(self, fields, *args, **self.from_mongo(kwargs))
 
     def convert_types(self, data, schema=None):
         ''' Returns a dict with any fields converted to proper bson types. '''
@@ -104,10 +105,6 @@ class Model(WarlockModel):
         To get a count, use the count() function which accepts the same
         arguments as find() with the exception of non-query fields like sort,
         limit, skip.
-        Possible kwarg options:
-        - sort: field(s) to sort on. Same format as pymongo
-        - limit: number of results to return
-        - skip: number of results to skip
         '''
         options = {}
 
@@ -115,12 +112,6 @@ class Model(WarlockModel):
             if option in kwargs:
                 options[option] = kwargs[option]
                 del options[option]
-
-        if len(kwargs) > 0 and len(args) == 0:
-            # Allow find to accept kwargs format for querying, pass things
-            # to pymongo as it expects
-            args = (kwargs,) + args
-            kwargs = {}
 
         result = cls.collection().find(*args, **kwargs)
 
@@ -134,36 +125,27 @@ class Model(WarlockModel):
             result = result.limit(options["limit"])
 
         for obj in result:
-            yield cls(**obj)
+            yield cls(obj, from_find=True)
 
     @classmethod
-    def find_by_id(cls, id, *args, **kwargs):
+    def find_by_id(cls, id, **kwargs):
         ''' Finds a single object from this collection. '''
-        if len(kwargs) > 0 and len(args) == 0:
-            # Allow find_one to accept kwargs format for querying, pass things
-            # to pymongo as it expects
-            args = (kwargs,) + args
-            kwargs = {}
+        if isinstance(id, basestring):
+            id = ObjectId(id)
 
-        kwargs["id"] = id
+        args = {"_id": id}
 
-        result = cls.collection().find_one(*args, **kwargs)
+        result = cls.collection().find_one(args, **kwargs)
         if result is not None:
-            return cls(**result)
+            return cls(result, from_find=True)
         return None
 
     @classmethod
     def find_one(cls, *args, **kwargs):
         ''' Finds a single object from this collection. '''
-        if len(kwargs) > 0 and len(args) == 0:
-            # Allow find_one to accept kwargs format for querying, pass things
-            # to pymongo as it expects
-            args = (kwargs,) + args
-            kwargs = {}
-
         result = cls.collection().find_one(*args, **kwargs)
         if result is not None:
-            return cls(**result)
+            return cls(result)
         return None
 
     @classmethod
@@ -172,12 +154,6 @@ class Model(WarlockModel):
             - not the same as pymongo's count, this is the equivalent to:
                 collection.find(*args, **kwargs).count()
         '''
-        if len(kwargs) > 0 and len(args) == 0:
-            # Allow find to accept kwargs format for querying, pass things
-            # to pymongo as it expects
-            args = (kwargs,) + args
-            kwargs = {}
-
         return cls.collection().find(*args, **kwargs).count()
 
     @classmethod
@@ -228,6 +204,35 @@ class Model(WarlockModel):
             "object_id": ObjectId
         }
         try:
-            jsonschema.validate(obj, self.schema, types=bson_types)
+            # Since Mongo can query for non-required fields, strip those
+            # required fields from the schema if we haven't sent them
+            schema = self.schema
+            if self._from_find:
+                schema = self._remove_required(self.schema)
+
+            jsonschema.validate(obj, schema, types=bson_types)
         except jsonschema.ValidationError as exc:
             raise ValidationError(str(exc))
+
+    def _remove_required(self, schema):
+        """ Remove required flags for a schema. """
+        result = {}
+        for key, value in schema.items():
+            if key == "default":
+                result[key] = False
+            elif isinstance(value, dict):
+                result[key] = self._remove_required(value)
+            else:
+                result[key] = value
+        return result
+
+    def __setattr__(self, key, value):
+        """ Allow us to write to certain fields. """
+        if key == "_from_find":
+            return object.__setattr__(self, key, value)
+        return WarlockModel.__setattr__(self, key, value)
+
+    def _populate_required_fields(self, obj):
+        """ Fill in any required fields with null values. This is used for find
+        queries where the field is required, but we don't want to fetch it. """
+        return obj

@@ -36,7 +36,7 @@ Warmongo is based off of Warlock, which is a JSON-schema validator for Python:
 
 4) Create an object using your model
 
-    >>> sweden = Country(name='Sweden', abbreviation='SE')
+    >>> sweden = Country({"name: 'Sweden', "abbreviation": 'SE')
     >>> sweden.save()
     >>> sweden._id
     '50b506916ee7d81d42ca2190'

@@ -17,6 +17,8 @@ setuptools.setup(
     url='http://github.com/robbrit/warmongo',
     keywords=["mongodb", "jsonschema"],
     packages=['warmongo'],
+    package_data={"warmongo": ["requirements.txt"]},
+    include_package_data=True,
     install_requires=parse_requirements(),
     classifiers=[
         "Programming Language :: Python",
