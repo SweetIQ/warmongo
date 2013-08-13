@@ -14,6 +14,8 @@
 
 from warlock.model import Model as WarlockModel
 from warlock.exceptions import ValidationError
+from datetime import datetime
+from dateutil.parser import parse as dateutil_parse
 import database
 
 import inflect
@@ -56,11 +58,12 @@ class Model(WarlockModel):
             value_type = subschema.get("type")
 
             # to convert: integers, ObjectID
-            # TODO: dates
             if value_type == "integer":
                 return int(value)
             elif value_type == "object_id":
                 return ObjectId(value)
+            elif value_type == "date":
+                return dateutil_parse(str(value))
             elif value_type == "array":
                 # get the subkey type
                 return [
@@ -85,6 +88,11 @@ class Model(WarlockModel):
         d = dict(self)
 
         self._id = self.collection().save(self.to_mongo(d))
+
+    def delete(self):
+        ''' Removes an object from the database. '''
+        if self._id:
+            self.collection().remove({"_id": ObjectId(str(self._id))})
 
     @classmethod
     def find_or_create(cls, *args, **kwargs):
@@ -201,7 +209,8 @@ class Model(WarlockModel):
         will allow you to specify "object_id" as a valid type in your JSON
         schema. """
         bson_types = {
-            "object_id": ObjectId
+            "object_id": ObjectId,
+            "date": datetime
         }
         try:
             # Since Mongo can query for non-required fields, strip those
