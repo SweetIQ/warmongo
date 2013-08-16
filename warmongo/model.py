@@ -180,12 +180,15 @@ class Model(WarlockModel):
         if cls._schema.get("collectionName"):
             return cls._schema.get("collectionName")
         elif cls._schema.get("name"):
-            name = inflect_engine.plural(cls._schema.get("name"))
+            name = cls._schema.get("name")
         else:
-            name = inflect_engine.plural(cls.__name__)
+            name = cls.__name__
 
         # convert to snake case
-        return (name[0] + re.sub('([A-Z])', r'_\1', name[1:])).lower()
+        name = (name[0] + re.sub('([A-Z])', r'_\1', name[1:])).lower()
+
+        # pluralize
+        return inflect_engine.plural(name)
 
     @classmethod
     def database_name(cls):
