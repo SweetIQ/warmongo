@@ -38,11 +38,17 @@ class Model(WarlockModel):
         if kwargs.get("from_find"):
             del kwargs["from_find"]
             self._from_find = True
+            fields = self.from_mongo(fields)
         else:
             self._from_find = False
 
         # creating object in kwargs form
         WarlockModel.__init__(self, fields, *args, **self.from_mongo(kwargs))
+
+    def reload(self):
+        ''' Reload this object's data from the DB. '''
+        fields = self.__class__.find_by_id(self._id)
+        WarlockModel.__init__(self, fields)
 
     def convert_types(self, data, schema=None):
         ''' Returns a dict with any fields converted to proper bson types. '''
