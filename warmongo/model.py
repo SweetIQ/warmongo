@@ -101,14 +101,17 @@ class Model(WarlockModel):
             self.collection().remove({"_id": ObjectId(str(self._id))})
 
     @classmethod
-    def find_or_create(cls, *args, **kwargs):
+    def find_or_create(cls, query, *args, **kwargs):
         ''' Retrieve an element from the database. If it doesn't exist, create
         it.  Calling this method is equivalent to calling find_one and then
         creating an object. Note that this method is not atomic.  '''
-        result = cls.find_one(*args, **kwargs)
+        result = cls.find_one(query, *args, **kwargs)
 
         if result is None:
-            result = cls(*args, **kwargs)
+            default = cls._schema.get("default", {})
+            default.update(query)
+
+            result = cls(default, *args, **kwargs)
 
         return result
 
