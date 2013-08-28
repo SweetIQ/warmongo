@@ -239,7 +239,7 @@ class Model(WarlockModel):
         """ Remove required flags for a schema. """
         result = {}
         for key, value in schema.items():
-            if key == "default":
+            if key == "required":
                 result[key] = False
             elif isinstance(value, dict):
                 result[key] = self._remove_required(value)
