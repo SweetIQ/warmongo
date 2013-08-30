@@ -12,90 +12,53 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from warlock.model import Model as WarlockModel
-from warlock.exceptions import ValidationError
 from datetime import datetime
-from dateutil.parser import parse as dateutil_parse
 import database
 
 import inflect
 import re
-import jsonschema
+
+from exceptions import ValidationError, InvalidSchemaException
 
 from bson import ObjectId
+from copy import deepcopy
 
 inflect_engine = inflect.engine()
 
+ValidTypes = {
+    "integer": int,
+    "boolean": bool,
+    "number": float,
+    "string": basestring,
+    "object_id": ObjectId,
+    "date": datetime
+}
 
-class Model(WarlockModel):
-    def __init__(self, fields, *args, **kwargs):
+
+class Model(object):
+    def __init__(self, fields, from_find=False, *args, **kwargs):
         ''' Creates an instance of the object.'''
-        # Replace any sub-fields of mine with their respective defaults
-        for field, value in self.schema.get("default", {}).items():
-            if field not in kwargs:
-                fields[field] = value
+        self._from_find = from_find
 
-        if kwargs.get("from_find"):
-            del kwargs["from_find"]
-            self._from_find = True
-            fields = self.from_mongo(fields)
-        else:
-            self._from_find = False
+        fields = deepcopy(fields)
 
-        # creating object in kwargs form
-        WarlockModel.__init__(self, fields, *args, **self.from_mongo(kwargs))
+        # populate any default fields for objects that haven't come from the DB
+        if not from_find:
+            for field, details in self._schema["properties"].items():
+                if "default" in details and not field in fields:
+                    fields[field] = details["default"]
+
+        self._fields = fields
+        self.validate()
 
     def reload(self):
         ''' Reload this object's data from the DB. '''
-        fields = self.__class__.find_by_id(self._id)
-        WarlockModel.__init__(self, fields)
-
-    def convert_types(self, data, schema=None):
-        ''' Returns a dict with any fields converted to proper bson types. '''
-        if schema is None:
-            schema = self.schema
-
-        if not "properties" in schema:
-            # The schema is likely an object, but it is an object that does
-            # not have a properties field. Just return the whole object.
-            return data
-
-        def convert_type(value, subschema, key):
-            value_type = subschema.get("type")
-
-            # to convert: integers, ObjectID
-            if value_type == "integer":
-                return int(value)
-            elif value_type == "object_id":
-                return ObjectId(value)
-            elif value_type == "date":
-                return dateutil_parse(str(value))
-            elif value_type == "array":
-                if not isinstance(value, list):
-                    raise TypeError("Field '%s' expected to be an array but is a %s" %
-                                    (key, type(value)))
-
-                return [
-                    convert_type(obj, subschema.get("items", {}), key)
-                    for obj in value
-                ]
-            elif value_type == "object":
-                return self.convert_types(value, subschema)
-            else:
-                return value
-
-        result = {}
-        for key, value in data.iteritems():
-            if value is not None and key in schema.get("properties", {}):
-                subschema = schema["properties"][key]
-                result[key] = convert_type(value, subschema, key)
-
-        return result
+        self._fields = self.__class__.find_by_id(self._id)
 
     def save(self):
         ''' Saves an object to the database. '''
-        d = dict(self)
-        self._id = self.collection().save(self.to_mongo(d))
+        self.validate()
+        self._id = self.collection().save(self._fields)
 
     def delete(self):
         ''' Removes an object from the database. '''
@@ -209,53 +172,89 @@ class Model(WarlockModel):
             return cls._schema.get("databaseName")
         return None
 
-    def from_mongo(self, d):
-        ''' Convert a dict from Mongo format to our format. '''
-        return self.convert_types(d)
+    def validate(self):
+        ''' Validate `schema` against a dict `obj`. '''
+        self.validate_field("", self._schema, self._fields)
 
-    def to_mongo(self, d):
-        ''' Convert a dict to Mongo format from our format. '''
-        return d
+    def validate_field(self, key, value_schema, value):
+        ''' Validate a single field in `value` named `key` against `value_schema`. '''
+        # check the type
+        value_type = value_schema.get("type", "object")
 
-    def validate(self, obj):
-        """ Apply a JSON schema to an object - this is an override from
-        Warlock's model so that we can add the additional bson types. This
-        will allow you to specify "object_id" as a valid type in your JSON
-        schema. """
-        bson_types = {
-            "object_id": ObjectId,
-            "date": datetime
-        }
-        try:
-            # Since Mongo can query for non-required fields, strip those
-            # required fields from the schema if we haven't sent them
-            schema = self.schema
-            if self._from_find:
-                schema = self._remove_required(self.schema)
+        if value_type == "array":
+            self.validate_array(key, value_schema, value)
+        elif value_type == "object":
+            self.validate_object(key, value_schema, value)
+        else:
+            self.validate_simple(key, value_schema, value)
 
-            jsonschema.validate(obj, schema, types=bson_types)
-        except jsonschema.ValidationError as exc:
-            raise ValidationError(str(exc))
+    def validate_array(self, key, value_schema, value):
+        if value_schema.get("items"):
+            for item in value:
+                self.validate_field(key, value_schema["items"], item)
+        else:
+            # no items, this is an untyped array
+            pass
 
-    def _remove_required(self, schema):
-        """ Remove required flags for a schema. """
-        result = {}
-        for key, value in schema.items():
-            if key == "required":
-                result[key] = False
-            elif isinstance(value, dict):
-                result[key] = self._remove_required(value)
-            else:
-                result[key] = value
-        return result
+    def validate_object(self, key, value_schema, value):
+        if not value_schema.get("properties"):
+            # no validation on this object
+            return
 
-    def __setattr__(self, key, value):
-        """ Allow us to write to certain fields. """
-        if key == "_from_find":
-            return object.__setattr__(self, key, value)
-        return WarlockModel.__setattr__(self, key, value)
+        for subkey, subvalue in value_schema["properties"].items():
+            if subkey in value:
+                self.validate_field(subkey, subvalue, value[subkey])
+            elif subvalue.get("required", False) and not self._from_find:
+                # if the field is required and we haven't pulled from find,
+                # throw an exception
+                raise ValidationError("Field '%s' is required but not found!" %
+                                        subkey)
 
-    def _populate_required_fields(self, obj):
-        """ Fill in any required fields with null values. This is used for find
-        queries where the field is required, but we don't want to fetch it. """
-        return obj
+        # Check for additional properties
+        if not value_schema.get("additionalProperties", True):
+            extra = set(value.keys()) - set(value_schema["properties"].keys())
+
+            if len(extra) > 0:
+                raise ValidationError("Additional properties are not allowed: %s" %
+                                        ', '.join(list(extra)))
+
+    def validate_simple(self, key, value_schema, value):
+        ''' Validate a simple field (not an object or array) against a schema. '''
+        value_type = value_schema.get("type", "any")
+
+        if value_type == "any":
+            # can be anything
+            pass
+        elif value_type == "number":
+            # special case: can be an int or a float
+            if not isinstance(value, int) and not isinstance(value, float):
+                raise ValidationError("Field '%s' is of type '%s', received '%s' (%s)" %
+                                      (key, value_type, str(value), type(value)))
+        elif value_type in ValidTypes:
+            if not isinstance(value, ValidTypes[value_type]):
+                raise ValidationError("Field '%s' is of type '%s', received '%s' (%s)" %
+                                      (key, value_type, str(value), type(value)))
+            # TODO: check other things like maximum, etc.
+        else:
+            # unknown type
+            raise InvalidSchemaException("Unknown type '%s'!" % value_type)
+
+    def __getattr__(self, attr):
+        if attr in self._schema["properties"]:
+            return self._fields[attr]
+        else:
+            raise AttributeError("%s has no attribute '%s'" % (str(self), attr))
+
+    def __setattr__(self, attr, value):
+        if attr.startswith("_"):
+            return object.__setattr__(self, attr, value)
+
+        if attr in self._schema["properties"]:
+            # Check the field against our schema
+            self.validate_field(attr, self._schema["properties"][attr], value)
+        elif not self._schema.get("additionalProperties", True):
+            # not allowed to add additional properties
+            raise ValidationError("Additional property '%s' not allowed!" % attr)
+
+        self._fields[attr] = value
+        return value

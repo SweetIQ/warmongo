@@ -8,9 +8,8 @@ saved in MongoDB.
 This extends the JSON schema by supporting extra BSON types:
 * ObjectId - use the `"object_id"` type in your JSON schema to validate that
              a field is a valid ObjectId.
-
-Warmongo is based off of Warlock, which is a JSON-schema validator for Python:
-- https://github.com/bcwaldon/warlock
+* datetime - use the `"date"` type in your JSON schema to validate that a field
+             is a valid datetime
 
 ## How
 
@@ -36,27 +35,31 @@ Warmongo is based off of Warlock, which is a JSON-schema validator for Python:
 
 4) Create an object using your model
 
-    >>> sweden = Country({"name: 'Sweden', "abbreviation": 'SE')
+    >>> sweden = Country({"name": 'Sweden', "abbreviation": 'SE'})
     >>> sweden.save()
     >>> sweden._id
-    '50b506916ee7d81d42ca2190'
+    ObjectId('50b506916ee7d81d42ca2190')
 
 5) Let the object validate itself!
 
     >>> sweden = Country.find_one({"name" : "Sweden"})
     >>> sweden.name = 5
     Traceback (most recent call last):
-	  File "<stdin>", line 1, in <module>
-      File "warlock/model.py", line 47, in __setattr__
-        self.__setitem__(key, value)
-    warlock.errors.InvalidOperation: Unable to set 'name' to '5'
+      File "<stdin>", line 1, in <module>
+      File "warmongo/model.py", line 254, in __setattr__
+        self.validate_field(attr, self._schema["properties"][attr], value)
+      File "warmongo/model.py", line 189, in validate_field
+        self.validate_simple(key, value_schema, value)
+      File "warmongo/model.py", line 236, in validate_simple
+        (key, value_type, str(value), type(value)))
+    warmongo.exceptions.ValidationError: Field 'name' is of type 'string', received '5' (<type 'int'>)
 
     >>> sweden.overlord = 'Bears'
     Traceback (most recent call last):
-	  File "<stdin>", line 1, in <module>
-      File "warlock/model.py", line 47, in __setattr__
-        raise InvalidOperation(msg)
-    warlock.error.InvalidOperation: Unable to set 'overlord' to 'Bears'
+      File "<stdin>", line 1, in <module>
+      File "warmongo/model.py", line 257, in __setattr__
+        raise ValidationError("Additional property '%s' not allowed!" % attr)
+    warmongo.exceptions.ValidationError: Additional property 'overlord' not allowed!
 
 ## Choosing a collection
 

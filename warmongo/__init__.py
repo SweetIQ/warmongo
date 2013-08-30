@@ -13,17 +13,36 @@
 # limitations under the License.
 
 from model import Model as WarmongoModel
-from database import connect
+from exceptions import InvalidSchemaException
 
-import warlock
+from copy import deepcopy
+import database
+
+# Export connect so we can do warmongo.connect()
+connect = database.connect
 
 
 def model_factory(schema, base_class=WarmongoModel):
+    ''' Construct a model based on `schema` that inherits from `base_class`. '''
+    if not schema.get("properties"):
+        raise InvalidSchemaException("No properties field in schema!")
+
+    if not schema.get("name"):
+        raise InvalidSchemaException("Warmongo models require a top-level 'name' attribute!")
+
+    schema = deepcopy(schema)
+
     # All models have an _id field
     if not "_id" in schema["properties"]:
-        schema["properties"]["_id"] = { "type": "object_id" }
+        schema["properties"]["_id"] = {"type": "object_id"}
 
     class Model(base_class):
         _schema = schema
 
-    return warlock.model_factory(schema, Model)
+        def __init__(self, *args, **kwargs):
+            self._schema = schema
+            base_class.__init__(self, *args, **kwargs)
+
+    Model.__name__ = str(schema["name"])
+
+    return Model
