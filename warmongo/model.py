@@ -60,7 +60,7 @@ class Model(WarlockModel):
             # not have a properties field. Just return the whole object.
             return data
 
-        def convert_type(value, subschema):
+        def convert_type(value, subschema, key):
             value_type = subschema.get("type")
 
             # to convert: integers, ObjectID
@@ -71,9 +71,12 @@ class Model(WarlockModel):
             elif value_type == "date":
                 return dateutil_parse(str(value))
             elif value_type == "array":
-                # get the subkey type
+                if not isinstance(value, list):
+                    raise TypeError("Field '%s' expected to be an array but is a %s" %
+                                    (key, type(value)))
+
                 return [
-                    convert_type(obj, subschema.get("items", {}))
+                    convert_type(obj, subschema.get("items", {}), key)
                     for obj in value
                 ]
             elif value_type == "object":
@@ -83,16 +86,15 @@ class Model(WarlockModel):
 
         result = {}
         for key, value in data.iteritems():
-            if key in schema.get("properties", {}):
+            if value is not None and key in schema.get("properties", {}):
                 subschema = schema["properties"][key]
-                result[key] = convert_type(value, subschema)
+                result[key] = convert_type(value, subschema, key)
 
         return result
 
     def save(self):
         ''' Saves an object to the database. '''
         d = dict(self)
-
         self._id = self.collection().save(self.to_mongo(d))
 
     def delete(self):
