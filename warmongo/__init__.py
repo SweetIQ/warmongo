@@ -17,9 +17,14 @@ from exceptions import InvalidSchemaException
 
 from copy import deepcopy
 import database
+import pymongo
 
 # Export connect so we can do warmongo.connect()
 connect = database.connect
+
+# Export some constants from pymongo
+ASCENDING = pymongo.ASCENDING
+DESCENDING = pymongo.DESCENDING
 
 
 def model_factory(schema, base_class=WarmongoModel):

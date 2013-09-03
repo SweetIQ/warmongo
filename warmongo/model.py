@@ -36,7 +36,7 @@ ValidTypes = {
 
 
 class Model(object):
-    def __init__(self, fields, from_find=False, *args, **kwargs):
+    def __init__(self, fields={}, from_find=False, *args, **kwargs):
         ''' Creates an instance of the object.'''
         self._from_find = from_find
 
@@ -53,7 +53,7 @@ class Model(object):
 
     def reload(self):
         ''' Reload this object's data from the DB. '''
-        self._fields = self.__class__.find_by_id(self._id)
+        self._fields = self.__class__.find_by_id(self._id)._fields
 
     def save(self):
         ''' Saves an object to the database. '''
@@ -64,6 +64,10 @@ class Model(object):
         ''' Removes an object from the database. '''
         if self._id:
             self.collection().remove({"_id": ObjectId(str(self._id))})
+
+    def get(self, field, default=None):
+        ''' Get a field if it exists, otherwise return the default. '''
+        return self._fields.get(field, default)
 
     @classmethod
     def find_or_create(cls, query, *args, **kwargs):
@@ -240,7 +244,7 @@ class Model(object):
             raise InvalidSchemaException("Unknown type '%s'!" % value_type)
 
     def __getattr__(self, attr):
-        if attr in self._schema["properties"]:
+        if attr in self._schema["properties"] and attr in self._fields:
             return self._fields[attr]
         else:
             raise AttributeError("%s has no attribute '%s'" % (str(self), attr))
