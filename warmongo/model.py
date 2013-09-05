@@ -244,12 +244,16 @@ class Model(object):
             raise InvalidSchemaException("Unknown type '%s'!" % value_type)
 
     def __getattr__(self, attr):
+        ''' Get an attribute from the fields we've selected. Note that if the
+        field doesn't exist, this will return None. '''
         if attr in self._schema["properties"] and attr in self._fields:
-            return self._fields[attr]
+            return self._fields.get(attr)
         else:
             raise AttributeError("%s has no attribute '%s'" % (str(self), attr))
 
     def __setattr__(self, attr, value):
+        ''' Set one of the fields, with validation. Exception is on "private"
+        fields - the ones that start with _. '''
         if attr.startswith("_"):
             return object.__setattr__(self, attr, value)
 
