@@ -193,6 +193,10 @@ class Model(object):
             self.validate_simple(key, value_schema, value)
 
     def validate_array(self, key, value_schema, value):
+        if not isinstance(value, list):
+            raise ValidationError("Field '%s' is of type 'array', received '%s' (%s)" %
+                                  (key, str(value), type(value)))
+
         if value_schema.get("items"):
             for item in value:
                 self.validate_field(key, value_schema["items"], item)
@@ -201,6 +205,10 @@ class Model(object):
             pass
 
     def validate_object(self, key, value_schema, value):
+        if not isinstance(value, dict):
+            raise ValidationError("Field '%s' is of type 'object', received '%s' (%s)" %
+                                  (key, str(value), type(value)))
+
         if not value_schema.get("properties"):
             # no validation on this object
             return
