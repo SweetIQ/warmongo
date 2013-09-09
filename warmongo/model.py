@@ -55,10 +55,10 @@ class Model(object):
         ''' Reload this object's data from the DB. '''
         self._fields = self.__class__.find_by_id(self._id)._fields
 
-    def save(self):
+    def save(self, *args, **kwargs):
         ''' Saves an object to the database. '''
         self.validate()
-        self._id = self.collection().save(self._fields)
+        self._id = self.collection().save(self._fields, *args, **kwargs)
 
     def delete(self):
         ''' Removes an object from the database. '''
