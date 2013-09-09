@@ -267,8 +267,8 @@ class Model(object):
             return [
                 self.cast(value, schema["items"]) for value in fields
             ]
-        elif value_type == "integer":
-            # The only thing that needs to be casted: ints
+        elif value_type == "integer" and isinstance(fields, float):
+            # The only thing that needs to be casted: floats -> ints
             return int(fields)
         else:
             return fields
