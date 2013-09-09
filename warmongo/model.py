@@ -48,12 +48,12 @@ class Model(object):
                 if "default" in details and not field in fields:
                     fields[field] = details["default"]
 
-        self._fields = fields
+        self._fields = self.cast(fields)
         self.validate()
 
     def reload(self):
         ''' Reload this object's data from the DB. '''
-        self._fields = self.__class__.find_by_id(self._id)._fields
+        self._fields = self.cast(self.__class__.find_by_id(self._id)._fields)
 
     def save(self, *args, **kwargs):
         ''' Saves an object to the database. '''
@@ -237,7 +237,7 @@ class Model(object):
         if value_type == "any":
             # can be anything
             pass
-        elif value_type == "number":
+        elif value_type == "number" or value_type == "integer":
             # special case: can be an int or a float
             if not isinstance(value, int) and not isinstance(value, float):
                 raise ValidationError("Field '%s' is of type '%s', received '%s' (%s)" %
@@ -250,6 +250,28 @@ class Model(object):
         else:
             # unknown type
             raise InvalidSchemaException("Unknown type '%s'!" % value_type)
+
+    def cast(self, fields, schema=None):
+        ''' Cast the fields from Mongo into our format - necessary to convert
+        floats into ints since Javascript doesn't support ints. '''
+        if schema is None:
+            schema = self._schema
+
+        value_type = schema.get("type", "object")
+
+        if value_type == "object" and schema.get("properties"):
+            return {
+                key: self.cast(value, schema["properties"]) for key, value in fields.items()
+            }
+        elif value_type == "array" and schema.get("items"):
+            return [
+                self.cast(value, schema["items"]) for value in fields
+            ]
+        elif value_type == "integer":
+            # The only thing that needs to be casted: ints
+            return int(fields)
+        else:
+            return fields
 
     def __getattr__(self, attr):
         ''' Get an attribute from the fields we've selected. Note that if the
