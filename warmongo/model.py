@@ -58,6 +58,11 @@ class Model(object):
     def save(self, *args, **kwargs):
         ''' Saves an object to the database. '''
         self.validate()
+
+        # set safe to True by default, older versions of pymongo didn't do that
+        if not "safe" in kwargs:
+            kwargs["safe"] = True
+
         self._id = self.collection().save(self._fields, *args, **kwargs)
 
     def delete(self):
