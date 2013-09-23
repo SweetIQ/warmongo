@@ -18,7 +18,8 @@ import database
 import inflect
 import re
 
-from exceptions import ValidationError, InvalidSchemaException
+from exceptions import ValidationError, InvalidSchemaException, \
+    InvalidReloadException
 from pymongo import DESCENDING
 
 from bson import ObjectId
@@ -54,7 +55,15 @@ class Model(object):
 
     def reload(self):
         ''' Reload this object's data from the DB. '''
-        self._fields = self.cast(self.__class__.find_by_id(self._id)._fields)
+        result = self.__class__.find_by_id(self._id)
+
+        # result will be None in the case that this object hasn't yet been
+        # saved to the DB, or if the object has been deleted since it was
+        # fetched
+        if result:
+            self._fields = self.cast(result._fields)
+        else:
+            raise InvalidReloadException("No object in the database with ID %s" % self._id)
 
     def save(self, *args, **kwargs):
         ''' Saves an object to the database. '''

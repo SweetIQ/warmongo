@@ -19,3 +19,7 @@ class InvalidSchemaException(Exception):
 class ValidationError(Exception):
     ''' Thrown when a field does not match the schema. '''
     pass
+
+class InvalidReloadException(Exception):
+    ''' Thrown when we attempt to call reload() on a model that is not in the
+    database. '''
