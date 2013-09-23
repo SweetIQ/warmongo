@@ -19,6 +19,7 @@ import inflect
 import re
 
 from exceptions import ValidationError, InvalidSchemaException
+from pymongo import DESCENDING
 
 from bson import ObjectId
 from copy import deepcopy
@@ -129,6 +130,18 @@ class Model(object):
         result = cls.collection().find_one(args, **kwargs)
         if result is not None:
             return cls(result, from_find=True)
+        return None
+
+    @classmethod
+    def find_latest(cls, *args, **kwargs):
+        ''' Finds the latest one by _id and returns it. '''
+        kwargs["limit"] = 1
+        kwargs["sort"] = [("_id", DESCENDING)]
+
+        result = cls.collection().find(*args, **kwargs)
+
+        if result.count() > 0:
+            return cls(result[0], from_find=True)
         return None
 
     @classmethod
