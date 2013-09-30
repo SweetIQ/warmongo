@@ -24,7 +24,7 @@ def connect(database, username=None, password=None, host="localhost", port=27017
     connection = connections.get(identifier)
 
     if connection is None:
-        connection = pymongo.Connection(host, port)
+        connection = pymongo.MongoClient(host, port)
 
     connections[identifier] = connection
 
