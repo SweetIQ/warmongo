@@ -85,6 +85,12 @@ class Model(object):
         return self._fields.get(field, default)
 
     @classmethod
+    def bulk_create(cls, objects, *args, **kwargs):
+        ''' Create a number of objects (yay performance). '''
+        docs = [obj._fields for obj in objects]
+        return cls.collection().insert(docs)
+
+    @classmethod
     def find_or_create(cls, query, *args, **kwargs):
         ''' Retrieve an element from the database. If it doesn't exist, create
         it.  Calling this method is equivalent to calling find_one and then
@@ -202,6 +208,10 @@ class Model(object):
         if cls._schema.get("databaseName"):
             return cls._schema.get("databaseName")
         return None
+
+    def to_dict(self):
+        ''' Convert the object to a dict. '''
+        return self._fields
 
     def validate(self):
         ''' Validate `schema` against a dict `obj`. '''
