@@ -115,24 +115,46 @@ class Model(object):
         '''
         options = {}
 
-        for option in ["sort", "limit", "skip"]:
+        for option in ["sort", "limit", "skip", "batch_size"]:
             if option in kwargs:
                 options[option] = kwargs[option]
                 del options[option]
 
-        result = cls.collection().find(*args, **kwargs)
+        if "batch_size" in options and "skip" not in options and "limit" not in options:
+            # run things in batches
+            current_skip = 0
+            limit = options["batch_size"]
 
-        if "sort" in options:
-            result = result.sort(options["sort"])
+            found_something = True
 
-        if "skip" in options:
-            result = result.skip(options["skip"])
+            while found_something:
+                found_something = False
 
-        if "limit" in options:
-            result = result.limit(options["limit"])
+                result = cls.collection().find(*args, **kwargs)
+                result = result.skip(current_skip).limit(limit)
 
-        for obj in result:
-            yield cls(obj, from_find=True)
+                if "sort" in options:
+                    result = result.sort(options["sort"])
+
+                for obj in result:
+                    found_something = True
+                    yield cls(obj, from_find=True)
+
+                current_skip += limit
+        else:
+            result = cls.collection().find(*args, **kwargs)
+
+            if "sort" in options:
+                result = result.sort(options["sort"])
+
+            if "skip" in options:
+                result = result.skip(options["skip"])
+
+            if "limit" in options:
+                result = result.limit(options["limit"])
+
+            for obj in result:
+                yield cls(obj, from_find=True)
 
     @classmethod
     def find_by_id(cls, id, **kwargs):
