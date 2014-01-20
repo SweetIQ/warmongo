@@ -36,3 +36,8 @@ nosetests.xml
 
 # Vim
 *.swp
+
+# Virtualenv
+include
+local
+man

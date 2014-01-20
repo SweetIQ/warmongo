@@ -239,17 +239,35 @@ class Model(object):
         ''' Validate `schema` against a dict `obj`. '''
         self.validate_field("", self._schema, self._fields)
 
+    def validate_field_type(self, key, value_schema, value, value_type):
+        if isinstance(value_type, list):
+            for subtype in value_type:
+                try:
+                    self.validate_field_type(key, value_schema, value, subtype)
+                    # We got this far, so break
+                    break
+                except ValidationError:
+                    # Ignore it
+                    pass
+            else:
+                # None of them passed,
+                raise ValidationError("Field '%s' must be one of the following types: '%s', received '%s' (%s)" %
+                                      (key, ", ".join(value_type), str(value), type(value)))
+        elif value_type == "array":
+            self.validate_array(key, value_schema, value)
+        elif value_type == "object":
+            self.validate_object(key, value_schema, value)
+        elif value_type == "null":
+            self.validate_null(key, value_schema, value)
+        else:
+            self.validate_simple(key, value_type, value)
+
     def validate_field(self, key, value_schema, value):
         ''' Validate a single field in `value` named `key` against `value_schema`. '''
         # check the type
         value_type = value_schema.get("type", "object")
 
-        if value_type == "array":
-            self.validate_array(key, value_schema, value)
-        elif value_type == "object":
-            self.validate_object(key, value_schema, value)
-        else:
-            self.validate_simple(key, value_schema, value)
+        self.validate_field_type(key, value_schema, value, value_type)
 
     def validate_array(self, key, value_schema, value):
         if not isinstance(value, list):
@@ -289,10 +307,12 @@ class Model(object):
                 raise ValidationError("Additional properties are not allowed: %s" %
                                         ', '.join(list(extra)))
 
-    def validate_simple(self, key, value_schema, value):
-        ''' Validate a simple field (not an object or array) against a schema. '''
-        value_type = value_schema.get("type", "any")
+    def validate_null(self, key, value_schema, value):
+        if value is not None:
+            raise ValidationError("Field '%s' is expected to be null!" % key)
 
+    def validate_simple(self, key, value_type, value):
+        ''' Validate a simple field (not an object or array) against a schema. '''
         if value_type == "any":
             # can be anything
             pass
@@ -318,11 +338,11 @@ class Model(object):
 
         value_type = schema.get("type", "object")
 
-        if value_type == "object" and schema.get("properties"):
+        if value_type == "object" and isinstance(fields, dict) and schema.get("properties"):
             return {
-                key: self.cast(value, schema["properties"]) for key, value in fields.items()
+                key: self.cast(value, schema["properties"].get(key, {})) for key, value in fields.items()
             }
-        elif value_type == "array" and schema.get("items"):
+        elif value_type == "array" and isinstance(fields, list) and schema.get("items"):
             return [
                 self.cast(value, schema["items"]) for value in fields
             ]
