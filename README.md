@@ -1,6 +1,6 @@
 # Warmongo!
 
-## Wat
+## Description
 
 This is a package for generating classes from a JSON-schema that are to be
 saved in MongoDB.
@@ -11,7 +11,7 @@ This extends the JSON schema by supporting extra BSON types:
 * datetime - use the `"date"` type in your JSON schema to validate that a field
              is a valid datetime
 
-## How
+## Usage
 
 1) Build your schema
 
@@ -94,3 +94,10 @@ a different one, put it in the JSON-schema:
 ## Licence
 
 Apache Version 2.0
+
+## Production Examples
+
+I use warmongo every day at my startup http://www.sweetiq.com/ to share data
+definitions between our Python and Node.js applications. It has been running in
+production for some time now, so it has been reasonably tested for robustness
+and performance.
