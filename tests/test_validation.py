@@ -124,6 +124,13 @@ class TestValidation(unittest.TestCase):
 
         self.assertEqual(5, m.field)
 
+        # using a long should still work
+        m = Model({
+            "field": 10L
+        })
+
+        self.assertEqual(10L, m.field)
+
     def testValidateMany(self):
         schema = {
             "name": "Model",

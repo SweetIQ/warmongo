@@ -318,7 +318,10 @@ class Model(object):
             pass
         elif value_type == "number" or value_type == "integer":
             # special case: can be an int or a float
-            if not isinstance(value, int) and not isinstance(value, float):
+            valid_types = [int, float, long]
+            matches = [klass for klass in valid_types if isinstance(value, klass)]
+
+            if len(matches) == 0:
                 raise ValidationError("Field '%s' is of type '%s', received '%s' (%s)" %
                                       (key, value_type, str(value), type(value)))
         elif value_type in ValidTypes:
